@@ -36,7 +36,7 @@ Claim: "phantom types are hopefully safe, but without the rewards" – worse tha
   - phantom types are tricky to get right – not great for a _type_ which is supposed to be clear and provide safety.
     To the untrained eye, they can seem somewhat magical, even.
     Like relying on overriding field value types in an extended record phantom argument and so on.
-    Worst of all, if you e.g. accidentally provide a wrong phantom type argument (e.g. misspell an existing variable),
+    Worst of all, if you e.g. accidentally provide the wrong phantom type argument (like by misspelling an existing variable),
     there will be no friendly compiler that has your back.
     
   - the value does not know as much as your type.
