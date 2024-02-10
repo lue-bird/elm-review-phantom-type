@@ -83,7 +83,6 @@ Claim: "phantom types are hopefully safe, but without the rewards" – worse tha
             Icon icon -> icon |> Icon.toHtml
     ```
     It's not about the specific API here, it's about the fact that you can safely read the `label`.
-    How we can also provide an alternative
 
 ## but what are the alternatives?
 
