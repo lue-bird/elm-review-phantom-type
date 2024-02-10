@@ -13,9 +13,14 @@ when inside the directory containing this file.
 
 import Review.Rule exposing (Rule)
 import Review.PhantomType
+import NoUnused
 
 
 config : List Rule
 config =
     [ Review.PhantomType.forbid
+
+    -- to catch unused type variables
+    , NoUnused.CustomTypeConstructors
+    , NoUnused.CustomTypeConstructorArgs
     ]
