@@ -2,7 +2,6 @@ module Tests exposing (tests)
 
 import Review.PhantomType
 import Review.Test
-import Review.Test.Dependencies
 import Test exposing (Test)
 
 
