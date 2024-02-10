@@ -1,9 +1,9 @@
-module PhantomType exposing (forbid)
+module Review.PhantomType exposing (forbid)
 
 {-| Reports choice `type` parameters that aren't used in the definition (often called "phantom types").
 
     config =
-        [ PhantomType.forbid
+        [ Review.PhantomType.forbid
         ]
 
 @docs forbid
@@ -56,7 +56,7 @@ type alias ChoiceTypeContext =
 -}
 forbid : Rule
 forbid =
-    Review.Rule.newProjectRuleSchema "PhantomType.forbid" Dict.empty
+    Review.Rule.newProjectRuleSchema "Review.PhantomType.forbid" Dict.empty
         |> Review.Rule.withContextFromImportedModules
         |> Review.Rule.withModuleVisitor
             (\moduleRuleSchema ->

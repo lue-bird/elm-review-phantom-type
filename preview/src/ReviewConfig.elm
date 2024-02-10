@@ -12,10 +12,10 @@ when inside the directory containing this file.
 -}
 
 import Review.Rule exposing (Rule)
-import PhantomType
+import Review.PhantomType
 
 
 config : List Rule
 config =
-    [ PhantomType.forbid
+    [ Review.PhantomType.forbid
     ]
