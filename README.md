@@ -249,8 +249,8 @@ from stupidly obvious to powerful
     
     withConversionsAndFold :
         ...
-        -> (ReviewRuleSchema
-            -> ReviewRuleSchemaWithConversionsAndFoldMissing
+        -> (ReviewRuleSchemaWithConversionsAndFoldMissing
+            -> ReviewRuleSchema
            )
     ```
     obviously this has it's limits and is mostly useful if you explicitly need a specific kind of call next.
