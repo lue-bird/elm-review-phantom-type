@@ -30,11 +30,13 @@ type alias ModuleContext =
 
 
 type alias ProjectContext =
-    Dict
-        Elm.Syntax.ModuleName.ModuleName
-        { moduleTypeAliases : Dict String TypeAliasContext
-        , moduleChoiceTypes : Dict String ChoiceTypeContext
-        }
+    { expansions :
+        Dict
+            ( Elm.Syntax.ModuleName.ModuleName, String )
+            { parameters : List String
+            , types : List Elm.Syntax.TypeAnnotation.TypeAnnotation
+            }
+    }
 
 
 type alias TypeAliasContext =
@@ -54,7 +56,7 @@ type alias ChoiceTypeContext =
 -}
 forbid : Rule
 forbid =
-    Review.Rule.newProjectRuleSchema "Review.PhantomType.forbid" Dict.empty
+    Review.Rule.newProjectRuleSchema "Review.PhantomType.forbid" initialProjectContext
         |> Review.Rule.withContextFromImportedModules
         |> Review.Rule.withModuleVisitor
             (\moduleRuleSchema ->
@@ -65,19 +67,79 @@ forbid =
         |> Review.Rule.withModuleContextUsingContextCreator
             { fromProjectToModule = projectToModuleContextCreator
             , fromModuleToProject = moduleToProjectContextCreator
-            , foldProjectContexts = Dict.union
+            , foldProjectContexts = projectContextsMerge
             }
         |> Review.Rule.fromProjectRuleSchema
+
+
+initialProjectContext : ProjectContext
+initialProjectContext =
+    { expansions = Dict.empty }
+
+
+projectContextsMerge : ProjectContext -> ProjectContext -> ProjectContext
+projectContextsMerge =
+    \a b ->
+        { expansions = Dict.union a.expansions b.expansions }
+
+
+choiceTypesFromModuleToExpansion :
+    Elm.Syntax.ModuleName.ModuleName
+    -> Dict String ChoiceTypeContext
+    ->
+        Dict
+            ( Elm.Syntax.ModuleName.ModuleName, String )
+            { parameters : List String
+            , types : List Elm.Syntax.TypeAnnotation.TypeAnnotation
+            }
+choiceTypesFromModuleToExpansion moduleName =
+    \moduleChoiceTypes ->
+        moduleChoiceTypes
+            |> Dict.toList
+            |> List.map
+                (\( unqualifiedName, choiceType ) ->
+                    ( ( moduleName, unqualifiedName )
+                    , { parameters = choiceType.parameters |> List.map Elm.Syntax.Node.value
+                      , types = choiceType.variants |> Dict.values |> List.concat
+                      }
+                    )
+                )
+            |> Dict.fromList
+
+
+typeAliasesFromModuleToExpansion :
+    Elm.Syntax.ModuleName.ModuleName
+    -> Dict String TypeAliasContext
+    ->
+        Dict
+            ( Elm.Syntax.ModuleName.ModuleName, String )
+            { parameters : List String
+            , types : List Elm.Syntax.TypeAnnotation.TypeAnnotation
+            }
+typeAliasesFromModuleToExpansion moduleName =
+    \moduleTypeAliases ->
+        moduleTypeAliases
+            |> Dict.toList
+            |> List.map
+                (\( unqualifiedName, typeAlias ) ->
+                    ( ( moduleName, unqualifiedName )
+                    , { parameters = typeAlias.parameters
+                      , types = [ typeAlias.type_ ]
+                      }
+                    )
+                )
+            |> Dict.fromList
 
 
 moduleToProjectContextCreator : Review.Rule.ContextCreator ModuleContext ProjectContext
 moduleToProjectContextCreator =
     Review.Rule.initContextCreator
         (\moduleName moduleContext ->
-            Dict.singleton moduleName
-                { moduleTypeAliases = moduleContext.moduleTypeAliases
-                , moduleChoiceTypes = moduleContext.moduleChoiceTypes
-                }
+            { expansions =
+                Dict.union
+                    (moduleContext.moduleTypeAliases |> typeAliasesFromModuleToExpansion moduleName)
+                    (moduleContext.moduleChoiceTypes |> choiceTypesFromModuleToExpansion moduleName)
+            }
         )
         |> Review.Rule.withModuleName
 
@@ -112,52 +174,6 @@ declarationListVisitor declarationList context =
                 |> List.filterMap (\(Node _ d) -> d |> declarationToChoiceTypeContext)
                 |> Dict.fromList
 
-        choiceTypesFromModuleToExpansion :
-            Elm.Syntax.ModuleName.ModuleName
-            -> Dict String ChoiceTypeContext
-            ->
-                List
-                    ( ( Elm.Syntax.ModuleName.ModuleName, String )
-                    , { parameters : List String
-                      , types : List Elm.Syntax.TypeAnnotation.TypeAnnotation
-                      }
-                    )
-        choiceTypesFromModuleToExpansion moduleName =
-            \moduleChoiceTypes ->
-                moduleChoiceTypes
-                    |> Dict.toList
-                    |> List.map
-                        (\( unqualifiedName, choiceType ) ->
-                            ( ( moduleName, unqualifiedName )
-                            , { parameters = choiceType.parameters |> List.map Elm.Syntax.Node.value
-                              , types = choiceType.variants |> Dict.values |> List.concat
-                              }
-                            )
-                        )
-
-        typeAliasesFromModuleToExpansion :
-            Elm.Syntax.ModuleName.ModuleName
-            -> Dict String TypeAliasContext
-            ->
-                List
-                    ( ( Elm.Syntax.ModuleName.ModuleName, String )
-                    , { parameters : List String
-                      , types : List Elm.Syntax.TypeAnnotation.TypeAnnotation
-                      }
-                    )
-        typeAliasesFromModuleToExpansion moduleName =
-            \moduleTypeAliases ->
-                moduleTypeAliases
-                    |> Dict.toList
-                    |> List.map
-                        (\( unqualifiedName, typeAlias ) ->
-                            ( ( moduleName, unqualifiedName )
-                            , { parameters = typeAlias.parameters
-                              , types = [ typeAlias.type_ ]
-                              }
-                            )
-                        )
-
         expansions :
             Dict
                 ( Elm.Syntax.ModuleName.ModuleName, String )
@@ -165,27 +181,11 @@ declarationListVisitor declarationList context =
                 , types : List Elm.Syntax.TypeAnnotation.TypeAnnotation
                 }
         expansions =
-            [ typeAliases
-                |> typeAliasesFromModuleToExpansion context.moduleName
-            , context.imported
-                |> Dict.toList
-                |> List.concatMap
-                    (\( moduleName, imported ) ->
-                        imported.moduleTypeAliases
-                            |> typeAliasesFromModuleToExpansion moduleName
-                    )
-            , context.imported
-                |> Dict.toList
-                |> List.concatMap
-                    (\( moduleName, imported ) ->
-                        imported.moduleChoiceTypes
-                            |> choiceTypesFromModuleToExpansion moduleName
-                    )
-            , choiceTypes
-                |> choiceTypesFromModuleToExpansion context.moduleName
-            ]
-                |> List.concat
-                |> Dict.fromList
+            Dict.union context.imported.expansions
+                (Dict.union
+                    (typeAliases |> typeAliasesFromModuleToExpansion context.moduleName)
+                    (choiceTypes |> choiceTypesFromModuleToExpansion context.moduleName)
+                )
     in
     ( choiceTypes
         |> Dict.toList
