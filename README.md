@@ -10,15 +10,16 @@ If you want to learn more about phantom types first, some recommends:
 ```elm
 import Review.Rule
 import Review.PhantomType
-import NoUnused
+import NoUnused.CustomTypeConstructors
+import NoUnused.CustomTypeConstructorArgs
 
 config : List Review.Rule.Rule
 config =
     [ Review.PhantomType.forbid
 
     -- to catch unused type variables
-    , NoUnused.CustomTypeConstructors
-    , NoUnused.CustomTypeConstructorArgs
+    , NoUnused.CustomTypeConstructors.rule []
+    , NoUnused.CustomTypeConstructorArgs.rule
     ]
 ```
   - 🧩 [`NoUnused.CustomTypeConstructorArgs`](https://dark.elm.dmy.fr/packages/jfmengels/elm-review-unused/latest/NoUnused-CustomTypeConstructorArgs)

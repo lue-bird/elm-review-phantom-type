@@ -11,7 +11,8 @@ when inside the directory containing this file.
 
 -}
 
-import NoUnused
+import NoUnused.CustomTypeConstructorArgs
+import NoUnused.CustomTypeConstructors
 import Review.PhantomType
 import Review.Rule exposing (Rule)
 
@@ -21,6 +22,6 @@ config =
     [ Review.PhantomType.forbid
 
     -- to catch unused type variables
-    , NoUnused.CustomTypeConstructors
-    , NoUnused.CustomTypeConstructorArgs
+    , NoUnused.CustomTypeConstructors.rule []
+    , NoUnused.CustomTypeConstructorArgs.rule
     ]
