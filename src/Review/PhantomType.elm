@@ -41,13 +41,17 @@ type alias ModuleContext =
 
 
 type alias ProjectContext =
-    { expansions :
-        Dict
-            ( Elm.Syntax.ModuleName.ModuleName, String )
-            { parameters : List String
-            , types : List Elm.Syntax.TypeAnnotation.TypeAnnotation
-            }
-    }
+    { expansions : Expansions }
+
+
+{-| Named types that itself can be expanded to more types
+-}
+type alias Expansions =
+    Dict
+        ( Elm.Syntax.ModuleName.ModuleName, String )
+        { parameters : List String
+        , types : List Elm.Syntax.TypeAnnotation.TypeAnnotation
+        }
 
 
 type alias TypeAliasContext =
@@ -99,13 +103,7 @@ projectContextsMerge =
 
 choiceTypesFromModuleToExpansion :
     Elm.Syntax.ModuleName.ModuleName
-    -> Dict String ChoiceTypeContext
-    ->
-        Dict
-            ( Elm.Syntax.ModuleName.ModuleName, String )
-            { parameters : List String
-            , types : List Elm.Syntax.TypeAnnotation.TypeAnnotation
-            }
+    -> (Dict String ChoiceTypeContext -> Expansions)
 choiceTypesFromModuleToExpansion moduleName =
     \moduleChoiceTypes ->
         moduleChoiceTypes
@@ -123,13 +121,7 @@ choiceTypesFromModuleToExpansion moduleName =
 
 typeAliasesFromModuleToExpansion :
     Elm.Syntax.ModuleName.ModuleName
-    -> Dict String TypeAliasContext
-    ->
-        Dict
-            ( Elm.Syntax.ModuleName.ModuleName, String )
-            { parameters : List String
-            , types : List Elm.Syntax.TypeAnnotation.TypeAnnotation
-            }
+    -> (Dict String TypeAliasContext -> Expansions)
 typeAliasesFromModuleToExpansion moduleName =
     \moduleTypeAliases ->
         moduleTypeAliases
@@ -188,12 +180,7 @@ declarationListVisitor declarationList context =
                 |> List.filterMap (\(Node _ d) -> d |> declarationToChoiceTypeContext)
                 |> Dict.fromList
 
-        expansions :
-            Dict
-                ( Elm.Syntax.ModuleName.ModuleName, String )
-                { parameters : List String
-                , types : List Elm.Syntax.TypeAnnotation.TypeAnnotation
-                }
+        expansions : Expansions
         expansions =
             Dict.union context.imported.expansions
                 (Dict.union
@@ -255,18 +242,16 @@ typeUsedVariables :
     { moduleNameLookup : ModuleNameLookupTable
     , useModuleName : Elm.Syntax.ModuleName.ModuleName
     , referredFrom : Set ( Elm.Syntax.ModuleName.ModuleName, String )
-    , expansions :
-        Dict
-            ( Elm.Syntax.ModuleName.ModuleName, String )
-            { parameters : List String
-            , types : List Elm.Syntax.TypeAnnotation.TypeAnnotation
-            }
+    , expansions : Expansions
     }
     ->
         (Elm.Syntax.TypeAnnotation.TypeAnnotation
          ->
             { knownToBeUsed : Set String
-            , referredBackTo : Dict ( Elm.Syntax.ModuleName.ModuleName, String ) (List Elm.Syntax.TypeAnnotation.TypeAnnotation)
+            , referredBackTo :
+                Dict
+                    ( Elm.Syntax.ModuleName.ModuleName, String )
+                    (List Elm.Syntax.TypeAnnotation.TypeAnnotation)
             }
         )
 typeUsedVariables context =
@@ -278,7 +263,10 @@ typeUsedVariables context =
                 (List (Node Elm.Syntax.TypeAnnotation.TypeAnnotation)
                  ->
                     { knownToBeUsed : Set String
-                    , referredBackTo : Dict ( Elm.Syntax.ModuleName.ModuleName, String ) (List Elm.Syntax.TypeAnnotation.TypeAnnotation)
+                    , referredBackTo :
+                        Dict
+                            ( Elm.Syntax.ModuleName.ModuleName, String )
+                            (List Elm.Syntax.TypeAnnotation.TypeAnnotation)
                     }
                 )
         typeNodesUsedVariableList newRefersFrom =
@@ -287,12 +275,7 @@ typeUsedVariables context =
                     { moduleNameLookup : ModuleNameLookupTable
                     , useModuleName : Elm.Syntax.ModuleName.ModuleName
                     , referredFrom : Set ( Elm.Syntax.ModuleName.ModuleName, String )
-                    , expansions :
-                        Dict
-                            ( Elm.Syntax.ModuleName.ModuleName, String )
-                            { parameters : List String
-                            , types : List Elm.Syntax.TypeAnnotation.TypeAnnotation
-                            }
+                    , expansions : Expansions
                     }
                 newContext =
                     { context | referredFrom = Set.union context.referredFrom newRefersFrom }
@@ -304,7 +287,10 @@ typeUsedVariables context =
                             let
                                 variables :
                                     { knownToBeUsed : Set String
-                                    , referredBackTo : Dict ( Elm.Syntax.ModuleName.ModuleName, String ) (List Elm.Syntax.TypeAnnotation.TypeAnnotation)
+                                    , referredBackTo :
+                                        Dict
+                                            ( Elm.Syntax.ModuleName.ModuleName, String )
+                                            (List Elm.Syntax.TypeAnnotation.TypeAnnotation)
                                     }
                                 variables =
                                     type_ |> typeUsedVariables newContext
@@ -351,7 +337,10 @@ typeUsedVariables context =
                             let
                                 untilBackRefers :
                                     { knownToBeUsed : Set String
-                                    , referredBackTo : Dict ( Elm.Syntax.ModuleName.ModuleName, String ) (List Elm.Syntax.TypeAnnotation.TypeAnnotation)
+                                    , referredBackTo :
+                                        Dict
+                                            ( Elm.Syntax.ModuleName.ModuleName, String )
+                                            (List Elm.Syntax.TypeAnnotation.TypeAnnotation)
                                     }
                                 untilBackRefers =
                                     expansion.types
