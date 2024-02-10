@@ -1,6 +1,6 @@
 # elm-review-phantom-type
 
-[`Review.PhantomType.forbid`](https://package.elm-lang.org/packages/lue-bird/elm-review-upgrade/1.0.0/Review.PhantomType#forbid)
+[`Review.PhantomType.forbid`](https://package.elm-lang.org/packages/lue-bird/elm-review-upgrade/1.0.0/Review-PhantomType#forbid)
 reports choice `type` parameters that aren't used in the definition (often called "phantom types").
 
 If you want to learn more about phantom types first, some recommends:
@@ -15,7 +15,7 @@ config : List Review.Rule.Rule
 config =
     [ Review.PhantomType.forbid
 
-    -- to catch unused variables
+    -- to catch unused type variables
     , NoUnused.CustomTypeConstructors
     , NoUnused.CustomTypeConstructorArgs
     ]
@@ -30,7 +30,7 @@ Claim: "phantom types are hopefully safe, but without the rewards" – worse tha
   - phantom types are not simple.
     How much time would it take you to teach someone extensible phantom record type builders
     in a way that they could write an API without ways to bypass the types?
-    It certainly risks increasing the burden of entry for packages etc.
+    It certainly risks increasing the burden of entry for users of your API.
 
   - phantom types are tricky to get right – not great for a _type_ which is supposed to be clear and provide safety.
     To the untrained eye, they can seem somewhat magical, even.
@@ -48,10 +48,15 @@ Claim: "phantom types are hopefully safe, but without the rewards" – worse tha
         = Text String
         | Icon Icon
     
-    type LabelMissing = LabelMissing Never
-    type LabelPresent = LabelPresent Never
+    type LabelMissing
+        = LabelMissing Never
+    
+    type LabelPresent
+        = LabelPresent Never
 
-    create : -> Button LabelMissing
+    create : Button LabelMissing
+    withText : String -> (Button LabelMissing -> Button LabelPresent)
+    withIcon : Icon -> (Button LabelMissing -> Button LabelPresent)
     
     toHtml : Button LabelPresent -> Html msg
     toHtml = \button ->
@@ -284,7 +289,130 @@ from stupidly obvious to powerful
     ```
     see [`Basics.never`](https://dark.elm.dmy.fr/packages/elm/core/latest/Basics#never)
     on how this is different from before: `Never` is impossible to construct, even internally.
-    TODO example of builder with at least 1 item with [allowable-state](https://dark.elm.dmy.fr/packages/lue-bird/elm-allowable-state/latest/)
+
+    It's common that builders require _at least 1_ call to some helper. Something like
+    ```elm
+    create ...
+        |> and A ...
+        |> and B ...
+        |> and C ...
+    ```
+    obviously, you can and should at least consider doing something like
+    ```elm
+    create ...
+        |> andStartWith A ...
+        |> and B ...
+        |> and C ...
+    -- or
+    createAndStartWith ...
+        A ...
+        |> and B ...
+        |> and C ...
+    ```
+    but admittedly this can look ugly.
+
+    To be able to re-use `and` from both states, we can add a type variable that determines what we know about the builder being "empty": either `Never` or [`Possibly`](https://dark.elm.dmy.fr/packages/lue-bird/elm-allowable-state/latest/Possibly)
+    ```elm
+    -- module Enum exposing (Enum, EnumBuilder, ...)
+    type alias Enum value =
+        EnumEmptiable HasMembers value (value -> { name : String, index : Int })
+    
+    type EnumBuilder constraints value toInfo =
+        EnumEmptiable
+            { toInfo : toInfo
+            , list : List value
+            }
+    
+    type HasNoMembers
+        = HasNoMembers Never
+    
+    type HasMembers
+        = HasMembers Never
+    
+    create : toInfo -> EnumBuilder HasNoMembers value_ toInfo
+    create toInfo =
+        { toInfo = toInfo, list = Emptiable.empty }
+    
+    and :
+        value
+        -> String
+        -> (EnumBuilder constraints_ value ({ name : String, index : Int } -> toInfo)
+            -> EnumBuilder HasMembers value toInfo
+           )
+    and value name = \enumSoFar ->
+        { toInfo =
+            enumSoFar.toInfo { name = name, index = enumSoFar.list |> Stack.length }
+        , list = enumSoFar.list |> Stack.onTopLay value
+        }
+    
+    randomlyChooseOne : Enum value -> Random.Generator value
+    randomlyChooseOne enum =
+        case enum.list of
+            head :: tail ->
+                Random.uniform head tail
+            
+            [] ->
+                ??
+    
+    example : Enum Order
+    example =
+        create
+            (\lt eq gt order ->
+                case order of
+                    LT -> lt
+                    EQ -> eq
+                    GT -> gt
+            )
+            |> and LT "LT"
+            |> and EQ "EQ"
+            |> and GT "GT"
+    ```
+    We know the `list` will never be empty but the compiler doesn't. Instead, try
+    ```elm
+    -- module Enum exposing (Enum, EnumBuilder(..), ...)
+    type alias Enum value =
+        EnumEmptiable Never value (value -> { name : String, index : Int })
+    
+    type alias EnumEmptiable emptyPossiblyOrNever value toInfo =
+        { toInfo : toInfo
+        , list : Emptiable (Stacked value) emptyPossiblyOrNever
+        }
+    
+    create : toInfo -> EnumEmptiable Possibly value_ toInfo
+    create toInfo =
+        { toInfo = toInfo, list = Emptiable.empty }
+    
+    and :
+        value
+        -> String
+        -> (EnumEmptiable emptyPossiblyOrNever_ value ({ name : String, index : Int } -> toInfo)
+            -> EnumEmptiable never_ value toInfo
+           )
+    and value name = \enumSoFar ->
+        { toInfo =
+            enumSoFar.toInfo { name = name, index = enumSoFar.list |> Stack.length }
+        , list = enumSoFar.list |> Stack.onTopLay value
+        }
+    
+    randomlyChooseOne : Enum value -> Random.Generator value
+    randomlyChooseOne enum =
+        Random.uniform (enum.list |> Stack.top) (enum.list |> Stack.removeTop |> Stack.toList)
+    
+    example : Enum Order
+    example =
+        create
+            (\lt eq gt order ->
+                case order of
+                    LT -> lt
+                    EQ -> eq
+                    GT -> gt
+            )
+            |> and LT "LT"
+            |> and EQ "EQ"
+            |> and GT "GT"
+    ```
+    neat, right?
+      - 🧩 [emptiness-typed](https://dark.elm.dmy.fr/packages/lue-bird/elm-emptiness-typed/latest/): `Stack`, `Emptiable`
 
   - actually store the phantom type
     ```elm
@@ -322,6 +450,61 @@ from stupidly obvious to powerful
     to : units -> (Quantity number units -> number)
     ```
     (a somewhat similar idea and a bit more is published as [`elm-typed-value`](https://dark.elm.dmy.fr/packages/lue-bird/elm-typed-value/latest/))
+
+  - store both the specific value as well as a function to turn it into a more general type
+    ```elm
+    type Expression
+        = Tuple ( Expression, Expression )
+        | IntExpression IntExpression
+        | Bool Bool
+    
+    type IntExpression
+        = IntDivideBy IntExpression {-//-} IntExpression
+        | IntLiteral Int
+    
+    type alias ExpressionKnown known =
+        { known : known
+        , toExpression : known -> Expression
+        }
+    
+    tuple :
+        ( ExpressionKnown first, ExpressionKnown second )
+        -> ExpressionKnown ( first, second )
+    tuple = \( first, second ) ->
+        { known = ( first.known, second.known )
+        , toExpression = \( firstSpecific, secondSpecific ) -> ( firstSpecific |> first.toExpression
+            , secondSpecific |> second.toExpression
+            )
+        }
+    
+    intLiteral : Int -> ExpressionKnown IntExpression
+    intLiteral = \int ->
+        { known = int, toExpression = IntLiteral }
+
+    intDivideBy :
+        ExpressionKnown IntExpression
+        -> (ExpressionKnown IntExpression
+            -> ExpressionKnown IntExpression
+           )
+    intDivideBy divisor = \toDivide ->
+        { known = toDivide.known |> IntDivideBy divisor.known
+        , toExpression = IntExpression
+        }
+    ```
+    From experience, this only really works when there's a clear "known" and "general" layer.
+    E.g. Once you feel like you have to do
+    ```elm
+    KnownOrGeneral IntLiteral
+        (KnownOrGeneral IntExpression
+            (KnownOrGeneral NumberExpression
+                (KnownOrGeneral ComparableExpression
+                    Expression
+                )
+            )
+        )
+    ```
+    you are doomed.
+    Just keeping only the "known" part and letting users explicitly convert between the types will make things a bit noisier but usually that's fine.
 
 With this many alternatives,
 are you up for the challenge to try and design your API without phantom types?
