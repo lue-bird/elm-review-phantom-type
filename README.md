@@ -1,7 +1,7 @@
 # elm-review-phantom-type
 
 [`Review.PhantomType.forbid`](https://package.elm-lang.org/packages/lue-bird/elm-review-upgrade/1.0.0/Review-PhantomType#forbid)
-reports choice `type` parameters that aren't used in the definition (often called "phantom types").
+reports choice `type` parameters that aren't used in the definition – often called "phantom types".
 
 If you want to learn more about phantom types first, some recommends:
   - [podcast episode "Phantom Builder Pattern" by elm radio](https://elm-radio.com/episode/phantom-builder/)
@@ -21,7 +21,7 @@ config =
     ]
 ```
   - 🧩 [`NoUnused.CustomTypeConstructorArgs`](https://dark.elm.dmy.fr/packages/jfmengels/elm-review-unused/latest/NoUnused-CustomTypeConstructorArgs)
-  - 🧩 [`NoUnused.CustomTypeConstructors`](https://dark.elm.dmy.fr/packages/jfmengels/elm-review-unused/latest/NoUnused-CustomTypeConstructors))
+  - 🧩 [`NoUnused.CustomTypeConstructors`](https://dark.elm.dmy.fr/packages/jfmengels/elm-review-unused/latest/NoUnused-CustomTypeConstructors)
 
 ## why?
 
@@ -165,7 +165,7 @@ from stupidly obvious to powerful
     usually though, this is just brain-brain trying to be too clever.
 
   - can you model the builder differently?
-    An example adapted from [the talk "The phantom builder pattern" by Jeroen Engels](https://www.youtube.com/watch?v=Trp3tmpMb-o&t=365s)
+    Based on [the button example from the talk "The phantom builder pattern" by Jeroen Engels](https://www.youtube.com/watch?v=Trp3tmpMb-o&t=365s)
     ```elm
     -- module Button exposing (Button, Behaviour, BehaviourMissing, BehaviourPresent, new, withOnClick, withDisabled)
     type Button constraints msg
@@ -194,7 +194,7 @@ from stupidly obvious to powerful
             -> Button BehaviourPresent msg
            )
     ```
-    instead, try
+    instead, try for example unifying builder helpers that are expected to be called in order
     ```elm
     -- module Button exposing (Button, Behaviour(..), create)
     type Button constraints msg
@@ -251,10 +251,10 @@ from stupidly obvious to powerful
             -> ReviewRuleSchemaWithConversionsAndFoldMissing
            )
     ```
-    obviously this has it's limits and is mostly useful if you explicitly need a specific call next.
+    obviously this has it's limits and is mostly useful if you explicitly need a specific kind of call next.
     So if you want to use a specific call for different states, you'll need another method.
 
-  - use `Never` to mark certain states as forbidden.
+  - use `Never` to mark certain states as forbidden. Pretty underrated IMO.
     An example similar to [`Json.Decode.Attempt`](https://dark.elm.dmy.fr/packages/MackeyRMS/json-decode-attempt/latest/Json-Decode-Attempt)
     ```elm
     type JsonDecoder parsed recoverable
@@ -266,7 +266,7 @@ from stupidly obvious to powerful
     decode : JsonDecoder Recoverable parsed -> (Json.Decode.Value -> parsed)
     decode (JsonDecoder jsonDecode) = \jsonValue ->
         case jsonValue |> jsonDecode of
-            Ok parsed ->    
+            Ok parsed ->
                 parsed
             
             Err _ ->
@@ -309,9 +309,9 @@ from stupidly obvious to powerful
         |> and B ...
         |> and C ...
     ```
-    but admittedly this can look ugly.
+    but admittedly this can _look_ ugly.
 
-    To be able to re-use `and` from both states, we can add a type variable that determines what we know about the builder being "empty": either `Never` or [`Possibly`](https://dark.elm.dmy.fr/packages/lue-bird/elm-allowable-state/latest/Possibly)
+    To be able to re-use `and` from both states, we can add a type variable that determines what we know about the builder being "empty": either `Never` or 🧩 [`Possibly`](https://dark.elm.dmy.fr/packages/lue-bird/elm-allowable-state/latest/Possibly)
     ```elm
     -- module Enum exposing (Enum, EnumBuilder, ...)
     type alias Enum value =
