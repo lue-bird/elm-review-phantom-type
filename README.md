@@ -513,11 +513,17 @@ from stupidly obvious to powerful
 With this many alternatives,
 are you up for the challenge to try and design your API without phantom types?
 
-## not convinced
+## not convinced?
 
 I'm super interested in what you're brewing!
 It's not like I haven't used phantom types for [experimental packages](https://dark.elm.dmy.fr/packages/lue-bird/elm-typesafe-array/latest/) as well.
 If you want to, text me @lue on slack.
+
+## performance note
+
+Checking for phantom types in types that expand a lot can get expensive.
+I suggest trying it out in watch mode and if it feels slow with your app,
+please [open an issue](https://github.com/lue-bird/elm-review-phantom-type/issues). I'm sure we can find edges to optimize.
 
 ## thanks
 - [jfmengels for the issue: "Follow the trail of phantom types"](https://github.com/jfmengels/elm-review-unused/issues/4)
