@@ -11,9 +11,9 @@ when inside the directory containing this file.
 
 -}
 
-import Review.Rule exposing (Rule)
-import Review.PhantomType
 import NoUnused
+import Review.PhantomType
+import Review.Rule exposing (Rule)
 
 
 config : List Rule
