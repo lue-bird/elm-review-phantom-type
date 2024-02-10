@@ -176,9 +176,12 @@ declarationListVisitor declarationList context =
 
         choiceTypes : Dict String ChoiceTypeContext
         choiceTypes =
+            choiceTypesList |> Dict.fromList
+
+        choiceTypesList : List ( String, ChoiceTypeContext )
+        choiceTypesList =
             declarationList
                 |> List.filterMap (\(Node _ d) -> d |> declarationToChoiceTypeContext)
-                |> Dict.fromList
 
         expansions : Expansions
         expansions =
@@ -188,14 +191,14 @@ declarationListVisitor declarationList context =
                     (choiceTypes |> choiceTypesFromModuleToExpansion context.moduleName)
                 )
     in
-    ( choiceTypes
-        |> Dict.toList
+    ( choiceTypesList
         |> List.concatMap
             (\( unqualifiedName, choiceType ) ->
                 let
                     usedVariables : Set String
                     usedVariables =
-                        Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.empty ( [], unqualifiedName ))
+                        Elm.Syntax.TypeAnnotation.Typed
+                            (Elm.Syntax.Node.empty ( [], unqualifiedName ))
                             (choiceType.parameters
                                 |> List.map (Elm.Syntax.Node.map Elm.Syntax.TypeAnnotation.GenericType)
                             )
@@ -214,28 +217,27 @@ declarationListVisitor declarationList context =
                                 Nothing
 
                             else
-                                parameterRange |> Just
+                                Review.Rule.error errorInfo parameterRange |> Just
                         )
-            )
-        |> List.map
-            (\phantomTypeParameterRange ->
-                Review.Rule.error
-                    { message = "variable not used in the definition"
-                    , details =
-                        [ """This is often called "phantom type" because the type argument has no effect on values that can be constructed using its variants.
-These types are usually used to provide more information on specific constructed values in order to restrict their use."""
-                        , """These types can be somewhat complex and tricky to use well and they don't give you the usual rewards of type-safety either."""
-                        , """If you were not aware of this feature when writing this type, it's safe to remove the parameter or use it somewhere.
-If you intentionally used this phantom type, I suggest looking at these alternatives: https://dark.elm.dmy.fr/packages/lue-bird/elm-review-phantom-type/latest#but-what-are-the-alternatives"""
-                        ]
-                    }
-                    phantomTypeParameterRange
             )
     , { context
         | moduleTypeAliases = typeAliases
         , moduleChoiceTypes = choiceTypes
       }
     )
+
+
+errorInfo : { message : String, details : List String }
+errorInfo =
+    { message = "variable not used in the definition"
+    , details =
+        [ """This is often called "phantom type" because the type argument has no effect on values that can be constructed using its variants.
+These types are usually used to provide more information on specific constructed values in order to restrict their use."""
+        , """These types can be somewhat complex and tricky to use well and they don't give you the usual rewards of type-safety either."""
+        , """If you were not aware of this feature when writing this type, it's safe to remove the parameter or use it somewhere.
+If you intentionally used this phantom type, I suggest looking at these alternatives: https://dark.elm.dmy.fr/packages/lue-bird/elm-review-phantom-type/latest#but-what-are-the-alternatives"""
+        ]
+    }
 
 
 typeUsedVariables :
