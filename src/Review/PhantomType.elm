@@ -2,9 +2,20 @@ module Review.PhantomType exposing (forbid)
 
 {-| Reports choice `type` parameters that aren't used in the definition (often called "phantom types").
 
+    import NoUnused.CustomTypeConstructorArgs
+    import NoUnused.CustomTypeConstructors
+    import Review.PhantomType
+
     config =
         [ Review.PhantomType.forbid
+
+        -- to catch unused type variables
+        , NoUnused.CustomTypeConstructors.rule []
+        , NoUnused.CustomTypeConstructorArgs.rule
         ]
+
+  - 🧩 [`NoUnused.CustomTypeConstructorArgs`](https://dark.elm.dmy.fr/packages/jfmengels/elm-review-unused/latest/NoUnused-CustomTypeConstructorArgs)
+  - 🧩 [`NoUnused.CustomTypeConstructors`](https://dark.elm.dmy.fr/packages/jfmengels/elm-review-unused/latest/NoUnused-CustomTypeConstructors)
 
 @docs forbid
 
@@ -52,7 +63,10 @@ type alias ChoiceTypeContext =
     }
 
 
-{-| [`Rule`](https://dark.elm.dmy.fr/packages/jfmengels/elm-review/latest/Review-Rule#Rule) to report phantom types
+{-| [`Rule`](https://dark.elm.dmy.fr/packages/jfmengels/elm-review/latest/Review-Rule#Rule) to report phantom types.
+
+More on the why and the alternatives in the [readme](https://dark.elm.dmy.fr/packages/lue-bird/elm-review-phantom-type/latest/)
+
 -}
 forbid : Rule
 forbid =
