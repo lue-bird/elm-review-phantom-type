@@ -250,6 +250,7 @@ from stupidly obvious to powerful
     So if you want to use a specific call for different states, you'll need another method.
 
   - use `Never` to mark certain states as forbidden.
+    An example similar to [`Json.Decode.Attempt`](https://dark.elm.dmy.fr/packages/MackeyRMS/json-decode-attempt/latest/Json-Decode-Attempt)
     ```elm
     type JsonDecoder parsed recoverable
         = JsonDecoder (Json.Decode.Value -> Result Error parsed)
