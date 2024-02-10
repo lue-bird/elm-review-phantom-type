@@ -10,6 +10,7 @@ If you want to learn more about phantom types first, some recommends:
 ```elm
 import Review.Rule
 import Review.PhantomType
+import NoUnused
 
 config : List Review.Rule.Rule
 config =
