@@ -1,6 +1,6 @@
 # elm-review-phantom-type
 
-[`Review.PhantomType.forbid`](https://package.elm-lang.org/packages/lue-bird/elm-review-upgrade/1.0.0/Review-PhantomType#forbid)
+[`Review.PhantomType.forbid`](https://package.elm-lang.org/packages/lue-bird/elm-review-phantom-type/1.0.0/Review-PhantomType#forbid)
 reports choice `type` parameters that aren't used in the definition – often called "phantom types".
 
 If you want to learn more about phantom types first, some recommends:
