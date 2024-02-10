@@ -91,17 +91,18 @@ from stupidly obvious to powerful
   - is limiting the choice worth it here? Like, what's the harm in allowing e.g.
       - your builder to set a background color after you've already done so
       - rules that have no visitors
+    
     Maybe you'll also find cases where e.g. having no visitors is useful like with insight rules that only use info from the initial context creator.
-    In any case, just because you can't find a use-case for a value that isn't harmful, why all the work to ban it?
+    In any case, just because you can't find a use-case for a value that isn't harmful, why all the complexity to ban it?
 
   - if you already have a clear idea for the shape of an API and it seems impossible to actualize without phantom types,
     try asking yourself which parts of the API design are functional and which parts are the "how it looks".
-    You _can_ likely emulate your idea without phantom types but maybe...
+    You _could_ likely even emulate your idea without phantom types but maybe...
 
   - can you model the same by adding more choice `type`s?
     An example based on [`WebGL.Texture.Resize`](https://package.elm-lang.org/packages/elm-explorations/webgl/latest/WebGL-Texture#Resize)
     ```elm
-    -- module WebGL.Texture exposing (Resize, Smaller, Bigger, linear, nearest, nearestMipmapLinear, ...)
+    -- module WebGL.Texture exposing (Options, Resize, Smaller, Bigger, linear, nearest, nearestMipmapLinear, ...)
     type alias Options =
         { ...
         , magnify : Resize Bigger
@@ -119,7 +120,7 @@ from stupidly obvious to powerful
     ```
     instead, try for example
     ```elm
-    -- module WebGL.Texture exposing (Resize, Magnify(..), Minify(..), ...)
+    -- module WebGL.Texture exposing (Options, Magnify(..), Minify(..), ...)
     type alias Options =
         { ...
         , magnify : Magnify
@@ -136,7 +137,7 @@ from stupidly obvious to powerful
         | MinifyMipmapLinear
     ```
     A really good example on how to do this well can be seen in [`elm-community/typed-svg`](https://dark.elm.dmy.fr/packages/elm-community/typed-svg/latest/TypedSvg-Types)
-    where many types may share some variants like "inherit", "none" and "auto" but in reality, there isn't really one thing uniting all these types.
+    where many types may share some variants like "inherit", "none" and "auto" but in reality, there isn't really one bigger connection uniting all these types.
 
     It _can_ make sense to make a type from shared variants in certain contexts.
     If you can find a name for it, that's a good indicator.
@@ -203,7 +204,6 @@ from stupidly obvious to powerful
     
     create : { behaviour : Behaviour msg } -> Button msg
     ```
-
   
   - model each builder "state" as a separate type.
     Here's an example slightly similar to [`Review.Rule.withModuleVisitor`](https://dark.elm.dmy.fr/packages/jfmengels/elm-review/latest/Review-Rule#withModuleVisitor)
@@ -249,7 +249,7 @@ from stupidly obvious to powerful
     obviously this has it's limits and is mostly useful if you explicitly need a specific call next.
     So if you want to use a specific call for different states, you'll need another method.
 
-  - use `Never` (and potentially [allowable-state](https://dark.elm.dmy.fr/packages/lue-bird/elm-allowable-state/latest/)):
+  - use `Never` to mark certain states as forbidden.
     ```elm
     type JsonDecoder parsed recoverable
         = JsonDecoder (Json.Decode.Value -> Result Error parsed)
@@ -283,7 +283,8 @@ from stupidly obvious to powerful
     ```
     see [`Basics.never`](https://dark.elm.dmy.fr/packages/elm/core/latest/Basics#never)
     on how this is different from before: `Never` is impossible to construct, even internally.
-    TODO example of builder with at least 1 item
+    TODO example of builder with at least 1 item with [allowable-state](https://dark.elm.dmy.fr/packages/lue-bird/elm-allowable-state/latest/)
+
   - actually store the phantom type
     ```elm
     -- module Quantity exposing (Quantity, Meters, Seconds, ...)
