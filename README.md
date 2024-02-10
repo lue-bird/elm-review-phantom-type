@@ -426,7 +426,7 @@ from stupidly obvious to powerful
     
     type Meters = Meters
     
-    meters : number -> Quantity number units
+    meters : number -> Quantity number Meters
     meters = Quantity
 
     toMeters : Quantity number meters -> number
