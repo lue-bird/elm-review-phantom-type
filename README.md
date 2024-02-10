@@ -367,6 +367,8 @@ from stupidly obvious to powerful
             |> and EQ "EQ"
             |> and GT "GT"
     ```
+      - 🧩 [`Random`](https://dark.elm.dmy.fr/packages/elm/random/latest/Random)
+    
     We know the `list` will never be empty but the compiler doesn't. Instead, try
     ```elm
     -- module Enum exposing (Enum, EnumBuilder(..), ...)
