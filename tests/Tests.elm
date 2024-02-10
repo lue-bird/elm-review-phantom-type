@@ -49,6 +49,20 @@ type alias Two a b =
                     |> Review.Test.runOnModules Review.PhantomType.forbid
                     |> Review.Test.expectNoErrors
             )
+        , Test.test "does not report mutually recursive call where an argument is known through one recursion"
+            (\() ->
+                """module A exposing (..)
+
+type Stack a b
+    = Empty
+    | Filled (StackFilled a b)
+
+type alias StackFilled a b =
+    { head : a, tail : Stack b a }
+"""
+                    |> Review.Test.run Review.PhantomType.forbid
+                    |> Review.Test.expectNoErrors
+            )
         , Test.test "does not report when type arguments are used indirectly in dependency"
             (\() ->
                 """module A exposing (..)
@@ -78,7 +92,7 @@ type Two a b
 These types are usually used to provide more information on specific constructed values in order to restrict their use."""
                                 , """These types can be somewhat complex and tricky to use well and they don't give you the usual rewards of type-safety either."""
                                 , """If you were not aware of this feature when writing this type, it's safe to remove the parameter or use it somewhere.
-If you intentionally used this phantom type, I suggest looking at [these alternatives](https://dark.elm.dmy.fr/packages/lue-bird/elm-review-phantom-type/latest#but-what-are-the-alternatives)."""
+If you intentionally used this phantom type, I suggest looking at these alternatives: https://dark.elm.dmy.fr/packages/lue-bird/elm-review-phantom-type/latest#but-what-are-the-alternatives"""
                                 ]
                             , under = "b"
                             }
@@ -101,12 +115,12 @@ type IntList a
 These types are usually used to provide more information on specific constructed values in order to restrict their use."""
                                 , """These types can be somewhat complex and tricky to use well and they don't give you the usual rewards of type-safety either."""
                                 , """If you were not aware of this feature when writing this type, it's safe to remove the parameter or use it somewhere.
-If you intentionally used this phantom type, I suggest looking at [these alternatives](https://dark.elm.dmy.fr/packages/lue-bird/elm-review-phantom-type/latest#but-what-are-the-alternatives)."""
+If you intentionally used this phantom type, I suggest looking at these alternatives: https://dark.elm.dmy.fr/packages/lue-bird/elm-review-phantom-type/latest#but-what-are-the-alternatives"""
                                 ]
                             , under = "a"
                             }
                             |> Review.Test.atExactly
-                                { start = { row = 3, column = 15 }, end = { row = 3, column = 16 } }
+                                { start = { row = 3, column = 14 }, end = { row = 3, column = 15 } }
                         ]
             )
         , Test.test "reports mutually recursive phantom type with one being a type alias"
@@ -129,12 +143,53 @@ type alias IntListFilled a =
 These types are usually used to provide more information on specific constructed values in order to restrict their use."""
                                 , """These types can be somewhat complex and tricky to use well and they don't give you the usual rewards of type-safety either."""
                                 , """If you were not aware of this feature when writing this type, it's safe to remove the parameter or use it somewhere.
-If you intentionally used this phantom type, I suggest looking at [these alternatives](https://dark.elm.dmy.fr/packages/lue-bird/elm-review-phantom-type/latest#but-what-are-the-alternatives)."""
+If you intentionally used this phantom type, I suggest looking at these alternatives: https://dark.elm.dmy.fr/packages/lue-bird/elm-review-phantom-type/latest#but-what-are-the-alternatives"""
                                 ]
                             , under = "a"
                             }
                             |> Review.Test.atExactly
-                                { start = { row = 3, column = 15 }, end = { row = 3, column = 16 } }
+                                { start = { row = 3, column = 14 }, end = { row = 3, column = 15 } }
+                        ]
+            )
+        , Test.test "reports mutually recursive phantom type with both being choice types"
+            (\() ->
+                """module A exposing (..)
+
+type IntList a
+    = Empty
+    | Filled (IntListFilled a)
+
+type IntListFilled a
+    = IntListFilled { head : Int, tail : IntList a }
+"""
+                    |> Review.Test.run Review.PhantomType.forbid
+                    |> Review.Test.expectErrors
+                        [ Review.Test.error
+                            { message = "variable not used in the definition"
+                            , details =
+                                [ """This is often called "phantom type" because the type argument has no effect on values that can be constructed using its variants.
+These types are usually used to provide more information on specific constructed values in order to restrict their use."""
+                                , """These types can be somewhat complex and tricky to use well and they don't give you the usual rewards of type-safety either."""
+                                , """If you were not aware of this feature when writing this type, it's safe to remove the parameter or use it somewhere.
+If you intentionally used this phantom type, I suggest looking at these alternatives: https://dark.elm.dmy.fr/packages/lue-bird/elm-review-phantom-type/latest#but-what-are-the-alternatives"""
+                                ]
+                            , under = "a"
+                            }
+                            |> Review.Test.atExactly
+                                { start = { row = 7, column = 20 }, end = { row = 7, column = 21 } }
+                        , Review.Test.error
+                            { message = "variable not used in the definition"
+                            , details =
+                                [ """This is often called "phantom type" because the type argument has no effect on values that can be constructed using its variants.
+These types are usually used to provide more information on specific constructed values in order to restrict their use."""
+                                , """These types can be somewhat complex and tricky to use well and they don't give you the usual rewards of type-safety either."""
+                                , """If you were not aware of this feature when writing this type, it's safe to remove the parameter or use it somewhere.
+If you intentionally used this phantom type, I suggest looking at these alternatives: https://dark.elm.dmy.fr/packages/lue-bird/elm-review-phantom-type/latest#but-what-are-the-alternatives"""
+                                ]
+                            , under = "a"
+                            }
+                            |> Review.Test.atExactly
+                                { start = { row = 3, column = 14 }, end = { row = 3, column = 15 } }
                         ]
             )
         ]
