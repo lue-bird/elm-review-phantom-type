@@ -520,4 +520,5 @@ It's not like I haven't used phantom types for [experimental packages](https://d
 If you want to, text me @lue on slack.
 
 ## thanks
-- [issue: Follow the trail of phantom types](https://github.com/jfmengels/elm-review-unused/issues/4)
+- [jfmengels for the issue: "Follow the trail of phantom types"](https://github.com/jfmengels/elm-review-unused/issues/4)
+- [miniBill for elm-fast-dict](https://dark.elm.dmy.fr/packages/miniBill/elm-fast-dict/latest)

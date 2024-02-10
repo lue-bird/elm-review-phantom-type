@@ -21,11 +21,11 @@ module Review.PhantomType exposing (forbid)
 
 -}
 
-import Dict exposing (Dict)
 import Elm.Syntax.Declaration exposing (Declaration)
 import Elm.Syntax.ModuleName
 import Elm.Syntax.Node exposing (Node(..))
 import Elm.Syntax.TypeAnnotation
+import FastDict exposing (Dict)
 import Review.ModuleNameLookupTable exposing (ModuleNameLookupTable)
 import Review.Rule exposing (Rule)
 import Set exposing (Set)
@@ -92,13 +92,13 @@ forbid =
 
 initialProjectContext : ProjectContext
 initialProjectContext =
-    { expansions = Dict.empty }
+    { expansions = FastDict.empty }
 
 
 projectContextsMerge : ProjectContext -> ProjectContext -> ProjectContext
 projectContextsMerge =
     \a b ->
-        { expansions = Dict.union a.expansions b.expansions }
+        { expansions = FastDict.union a.expansions b.expansions }
 
 
 choiceTypesFromModuleToExpansion :
@@ -107,16 +107,16 @@ choiceTypesFromModuleToExpansion :
 choiceTypesFromModuleToExpansion moduleName =
     \moduleChoiceTypes ->
         moduleChoiceTypes
-            |> Dict.toList
+            |> FastDict.toList
             |> List.map
                 (\( unqualifiedName, choiceType ) ->
                     ( ( moduleName, unqualifiedName )
                     , { parameters = choiceType.parameters |> List.map Elm.Syntax.Node.value
-                      , types = choiceType.variants |> Dict.values |> List.concat
+                      , types = choiceType.variants |> FastDict.values |> List.concat
                       }
                     )
                 )
-            |> Dict.fromList
+            |> FastDict.fromList
 
 
 typeAliasesFromModuleToExpansion :
@@ -125,7 +125,7 @@ typeAliasesFromModuleToExpansion :
 typeAliasesFromModuleToExpansion moduleName =
     \moduleTypeAliases ->
         moduleTypeAliases
-            |> Dict.toList
+            |> FastDict.toList
             |> List.map
                 (\( unqualifiedName, typeAlias ) ->
                     ( ( moduleName, unqualifiedName )
@@ -134,7 +134,7 @@ typeAliasesFromModuleToExpansion moduleName =
                       }
                     )
                 )
-            |> Dict.fromList
+            |> FastDict.fromList
 
 
 moduleToProjectContextCreator : Review.Rule.ContextCreator ModuleContext ProjectContext
@@ -142,7 +142,7 @@ moduleToProjectContextCreator =
     Review.Rule.initContextCreator
         (\moduleName moduleContext ->
             { expansions =
-                Dict.union
+                FastDict.union
                     (moduleContext.moduleTypeAliases |> typeAliasesFromModuleToExpansion moduleName)
                     (moduleContext.moduleChoiceTypes |> choiceTypesFromModuleToExpansion moduleName)
             }
@@ -156,8 +156,8 @@ projectToModuleContextCreator =
         (\lookupTable moduleName projectContext ->
             { lookupTable = lookupTable
             , moduleName = moduleName
-            , moduleTypeAliases = Dict.empty
-            , moduleChoiceTypes = Dict.empty
+            , moduleTypeAliases = FastDict.empty
+            , moduleChoiceTypes = FastDict.empty
             , imported = projectContext
             }
         )
@@ -172,11 +172,11 @@ declarationListVisitor declarationList context =
         typeAliases =
             declarationList
                 |> List.filterMap (\(Node _ d) -> d |> declarationToTypeAliasContext)
-                |> Dict.fromList
+                |> FastDict.fromList
 
         choiceTypes : Dict String ChoiceTypeContext
         choiceTypes =
-            choiceTypesList |> Dict.fromList
+            choiceTypesList |> FastDict.fromList
 
         choiceTypesList : List ( String, ChoiceTypeContext )
         choiceTypesList =
@@ -185,8 +185,8 @@ declarationListVisitor declarationList context =
 
         expansions : Expansions
         expansions =
-            Dict.union context.imported.expansions
-                (Dict.union
+            FastDict.union context.imported.expansions
+                (FastDict.union
                     (typeAliases |> typeAliasesFromModuleToExpansion context.moduleName)
                     (choiceTypes |> choiceTypesFromModuleToExpansion context.moduleName)
                 )
@@ -298,18 +298,18 @@ typeUsedVariables context =
                                     type_ |> typeUsedVariables newContext
                             in
                             { knownToBeUsed = Set.union soFar.knownToBeUsed variables.knownToBeUsed
-                            , referredBackTo = Dict.union soFar.referredBackTo variables.referredBackTo
+                            , referredBackTo = FastDict.union soFar.referredBackTo variables.referredBackTo
                             }
                         )
-                        { knownToBeUsed = Set.empty, referredBackTo = Dict.empty }
+                        { knownToBeUsed = Set.empty, referredBackTo = FastDict.empty }
     in
     \type_ ->
         case type_ of
             Elm.Syntax.TypeAnnotation.Unit ->
-                { knownToBeUsed = Set.empty, referredBackTo = Dict.empty }
+                { knownToBeUsed = Set.empty, referredBackTo = FastDict.empty }
 
             Elm.Syntax.TypeAnnotation.GenericType variable ->
-                { knownToBeUsed = variable |> Set.singleton, referredBackTo = Dict.empty }
+                { knownToBeUsed = variable |> Set.singleton, referredBackTo = FastDict.empty }
 
             Elm.Syntax.TypeAnnotation.Typed (Node nameRange ( _, unqualifiedName )) arguments ->
                 let
@@ -325,12 +325,12 @@ typeUsedVariables context =
                 if context.referredFrom |> Set.member ( moduleName, unqualifiedName ) then
                     { knownToBeUsed = Set.empty
                     , referredBackTo =
-                        Dict.singleton ( moduleName, unqualifiedName )
+                        FastDict.singleton ( moduleName, unqualifiedName )
                             (arguments |> List.map Elm.Syntax.Node.value)
                     }
 
                 else
-                    case context.expansions |> Dict.get ( moduleName, unqualifiedName ) of
+                    case context.expansions |> FastDict.get ( moduleName, unqualifiedName ) of
                         -- type is imported from dependencies
                         Nothing ->
                             arguments |> typeNodesUsedVariableList Set.empty
@@ -353,13 +353,13 @@ typeUsedVariables context =
                                                         (List.map2 (\parameter (Node _ fill) -> ( parameter, fill ))
                                                             expansion.parameters
                                                             arguments
-                                                            |> Dict.fromList
+                                                            |> FastDict.fromList
                                                         )
                                                     |> Elm.Syntax.Node.empty
                                             )
                                         |> typeNodesUsedVariableList (( moduleName, unqualifiedName ) |> Set.singleton)
                             in
-                            case untilBackRefers.referredBackTo |> Dict.get ( moduleName, unqualifiedName ) of
+                            case untilBackRefers.referredBackTo |> FastDict.get ( moduleName, unqualifiedName ) of
                                 Nothing ->
                                     { knownToBeUsed = untilBackRefers.knownToBeUsed
                                     , referredBackTo = untilBackRefers.referredBackTo
@@ -401,7 +401,7 @@ typeUsedVariables context =
                                                 |> listSetUnion
                                     in
                                     { knownToBeUsed = Set.union untilBackRefers.knownToBeUsed knownThanksToReferBack
-                                    , referredBackTo = untilBackRefers.referredBackTo |> Dict.remove ( moduleName, unqualifiedName )
+                                    , referredBackTo = untilBackRefers.referredBackTo |> FastDict.remove ( moduleName, unqualifiedName )
                                     }
 
             Elm.Syntax.TypeAnnotation.Tupled parts ->
@@ -445,7 +445,7 @@ typeFillInVariables variablesToFillIn =
         (\type_ ->
             case type_ of
                 Elm.Syntax.TypeAnnotation.GenericType variable ->
-                    case variablesToFillIn |> Dict.get variable of
+                    case variablesToFillIn |> FastDict.get variable of
                         Nothing ->
                             Elm.Syntax.TypeAnnotation.GenericType variable
 
@@ -540,7 +540,7 @@ declarationToChoiceTypeContext =
                                     , syntaxVariant.arguments |> List.map Elm.Syntax.Node.value
                                     )
                                 )
-                            |> Dict.fromList
+                            |> FastDict.fromList
                   }
                 )
                     |> Just
