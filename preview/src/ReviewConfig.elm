@@ -21,7 +21,7 @@ config : List Rule
 config =
     [ Review.PhantomType.forbid
 
-    -- to catch unused type variables
+    -- to catch variables in unused parts of the type
     , NoUnused.CustomTypeConstructors.rule []
     , NoUnused.CustomTypeConstructorArgs.rule
     ]
