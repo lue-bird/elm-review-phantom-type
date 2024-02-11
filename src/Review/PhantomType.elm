@@ -101,10 +101,10 @@ projectContextsMerge =
         { expansions = FastDict.union a.expansions b.expansions }
 
 
-choiceTypesFromModuleToExpansion :
+choiceTypesFromModuleToExpansions :
     Elm.Syntax.ModuleName.ModuleName
     -> (Dict String ChoiceTypeContext -> Expansions)
-choiceTypesFromModuleToExpansion moduleName =
+choiceTypesFromModuleToExpansions moduleName =
     \moduleChoiceTypes ->
         moduleChoiceTypes
             |> FastDict.toList
@@ -119,10 +119,10 @@ choiceTypesFromModuleToExpansion moduleName =
             |> FastDict.fromList
 
 
-typeAliasesFromModuleToExpansion :
+typeAliasesFromModuleToExpansions :
     Elm.Syntax.ModuleName.ModuleName
     -> (Dict String TypeAliasContext -> Expansions)
-typeAliasesFromModuleToExpansion moduleName =
+typeAliasesFromModuleToExpansions moduleName =
     \moduleTypeAliases ->
         moduleTypeAliases
             |> FastDict.toList
@@ -143,8 +143,8 @@ moduleToProjectContextCreator =
         (\moduleName moduleContext ->
             { expansions =
                 FastDict.union
-                    (moduleContext.moduleTypeAliases |> typeAliasesFromModuleToExpansion moduleName)
-                    (moduleContext.moduleChoiceTypes |> choiceTypesFromModuleToExpansion moduleName)
+                    (moduleContext.moduleTypeAliases |> typeAliasesFromModuleToExpansions moduleName)
+                    (moduleContext.moduleChoiceTypes |> choiceTypesFromModuleToExpansions moduleName)
             }
         )
         |> Review.Rule.withModuleName
@@ -187,8 +187,8 @@ declarationListVisitor declarationList context =
         expansions =
             FastDict.union context.imported.expansions
                 (FastDict.union
-                    (typeAliases |> typeAliasesFromModuleToExpansion context.moduleName)
-                    (choiceTypes |> choiceTypesFromModuleToExpansion context.moduleName)
+                    (typeAliases |> typeAliasesFromModuleToExpansions context.moduleName)
+                    (choiceTypes |> choiceTypesFromModuleToExpansions context.moduleName)
                 )
     in
     ( choiceTypesList
