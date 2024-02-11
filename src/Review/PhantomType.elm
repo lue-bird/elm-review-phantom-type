@@ -29,6 +29,7 @@ import FastDict exposing (Dict)
 import Review.ModuleNameLookupTable exposing (ModuleNameLookupTable)
 import Review.Rule exposing (Rule)
 import Set exposing (Set)
+import Type.LocalExtra
 
 
 type alias ModuleContext =
@@ -97,8 +98,8 @@ initialProjectContext =
 
 projectContextsMerge : ProjectContext -> ProjectContext -> ProjectContext
 projectContextsMerge =
-    \a b ->
-        { expansions = FastDict.union a.expansions b.expansions }
+    \new previous ->
+        { expansions = FastDict.union new.expansions previous.expansions }
 
 
 choiceTypesFromModuleToExpansions :
@@ -349,7 +350,7 @@ typeUsedVariables context =
                                         |> List.map
                                             (\expansionType ->
                                                 expansionType
-                                                    |> typeFillInVariables
+                                                    |> Type.LocalExtra.fillInVariables
                                                         (List.map2 (\parameter (Node _ fill) -> ( parameter, fill ))
                                                             expansion.parameters
                                                             arguments
@@ -372,7 +373,7 @@ typeUsedVariables context =
                                             arguments
                                                 |> List.map
                                                     (\(Node _ arg) ->
-                                                        case arg |> typeToVariable of
+                                                        case arg |> Type.LocalExtra.toVariable of
                                                             Nothing ->
                                                                 Nothing
 
@@ -419,83 +420,6 @@ typeUsedVariables context =
 
             Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation fromNode toNode ->
                 [ fromNode, toNode ] |> typeNodesUsedVariableList Set.empty
-
-
-typeToVariable :
-    Elm.Syntax.TypeAnnotation.TypeAnnotation
-    -> Maybe String
-typeToVariable =
-    \type_ ->
-        case type_ of
-            Elm.Syntax.TypeAnnotation.GenericType variable ->
-                variable |> Just
-
-            _ ->
-                Nothing
-
-
-typeFillInVariables :
-    Dict String Elm.Syntax.TypeAnnotation.TypeAnnotation
-    ->
-        (Elm.Syntax.TypeAnnotation.TypeAnnotation
-         -> Elm.Syntax.TypeAnnotation.TypeAnnotation
-        )
-typeFillInVariables variablesToFillIn =
-    typeMap
-        (\type_ ->
-            case type_ of
-                Elm.Syntax.TypeAnnotation.GenericType variable ->
-                    case variablesToFillIn |> FastDict.get variable of
-                        Nothing ->
-                            Elm.Syntax.TypeAnnotation.GenericType variable
-
-                        Just fill ->
-                            fill
-
-                nonVariableType ->
-                    nonVariableType
-        )
-
-
-{-| Map it, then all its sub-types, all the way down
--}
-typeMap :
-    (Elm.Syntax.TypeAnnotation.TypeAnnotation -> Elm.Syntax.TypeAnnotation.TypeAnnotation)
-    -> (Elm.Syntax.TypeAnnotation.TypeAnnotation -> Elm.Syntax.TypeAnnotation.TypeAnnotation)
-typeMap typeChange =
-    let
-        step : Node Elm.Syntax.TypeAnnotation.TypeAnnotation -> Node Elm.Syntax.TypeAnnotation.TypeAnnotation
-        step =
-            Elm.Syntax.Node.map (\stepType -> stepType |> typeMap typeChange)
-    in
-    -- IGNORE TCO
-    \type_ ->
-        case type_ |> typeChange of
-            Elm.Syntax.TypeAnnotation.Unit ->
-                Elm.Syntax.TypeAnnotation.Unit
-
-            Elm.Syntax.TypeAnnotation.GenericType name ->
-                Elm.Syntax.TypeAnnotation.GenericType name
-
-            Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation input output ->
-                Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation (input |> step) (output |> step)
-
-            Elm.Syntax.TypeAnnotation.Tupled parts ->
-                Elm.Syntax.TypeAnnotation.Tupled (parts |> List.map step)
-
-            Elm.Syntax.TypeAnnotation.Record fields ->
-                Elm.Syntax.TypeAnnotation.Record
-                    (fields |> List.map (Elm.Syntax.Node.map (\( name, value ) -> ( name, value |> step ))))
-
-            Elm.Syntax.TypeAnnotation.GenericRecord extended fields ->
-                Elm.Syntax.TypeAnnotation.GenericRecord extended
-                    (fields
-                        |> Elm.Syntax.Node.map
-                            (List.map (Elm.Syntax.Node.map (\( name, value ) -> ( name, value |> step ))))
-                    )
-
-            Elm.Syntax.TypeAnnotation.Typed nameNode arguments ->
-                Elm.Syntax.TypeAnnotation.Typed nameNode (arguments |> List.map step)
 
 
 listSetUnion : List (Set comparable) -> Set comparable
