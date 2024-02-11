@@ -253,7 +253,7 @@ from stupidly obvious to powerful
             -> ReviewRuleSchema
            )
     ```
-    obviously this has it's limits and is mostly useful if you explicitly need a specific kind of call next.
+    obviously this has its limits and is mostly useful if you explicitly need a specific kind of call next.
     So if you want to use a specific call for different states, you'll need another method.
 
   - use `Never` to mark certain states as forbidden. Pretty underrated IMO.

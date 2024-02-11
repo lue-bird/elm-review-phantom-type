@@ -3,3 +3,4 @@
 
 #### 1.0.2
   - readme `meters` example correct
+  - readme typo correct
